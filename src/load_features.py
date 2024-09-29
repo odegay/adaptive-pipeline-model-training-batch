@@ -1,5 +1,6 @@
 import pandas as pd
 import tensorflow as tf
+import io
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from google.cloud import storage
@@ -29,7 +30,7 @@ def load_data_from_gcs(bucket_uri: str) -> pd.DataFrame:
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(file_path)
     data = blob.download_as_text()
-    df = pd.read_csv(pd.compat.StringIO(data))
+    df = pd.read_csv(io.StringIO(data))
     return df
 
 def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num1'):
