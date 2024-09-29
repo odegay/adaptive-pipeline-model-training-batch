@@ -1,1 +1,1 @@
-# adaptive-pipeline-training
+# adaptive-pipeline-model-training-batch
