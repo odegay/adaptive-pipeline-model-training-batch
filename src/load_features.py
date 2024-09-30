@@ -33,7 +33,7 @@ def load_data_from_gcs(bucket_uri: str) -> pd.DataFrame:
     df = pd.read_csv(io.StringIO(data))
     return df
 
-def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num1'):
+def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num 1'):
     """
     Split the DataFrame into features and output based on the specified column name.
 
