@@ -41,9 +41,13 @@ def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num 1'):
     :param output_column: The column to be used as output. Default is 'Num1'.
     :return: Tuple of (features DataFrame, output Series)
     """
-    if 'Date' in df.columns:
-        logger.debug(f"Date column converted to ordinal values, old values: {df['Date']}, new values: {pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)}")
-        df['Date'] = pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)               
+    # if 'Date' in df.columns:
+    #     logger.debug(f"Date column converted to ordinal values, old values: {df['Date']}, new values: {pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)}")
+    #     df['Date'] = pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)               
+
+    df['Date'] = pd.to_datetime(df['Date'])    
+    # Convert the 'Date' column to Unix time (number of seconds since 1970-01-01)
+    df['Date_Unix'] = df['Date'].apply(lambda x: x.timestamp())   
 
     output = df[output_column]
     features = df.drop(columns=[output_column])
