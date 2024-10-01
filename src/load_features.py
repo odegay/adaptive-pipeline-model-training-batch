@@ -42,7 +42,8 @@ def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num 1'):
     :return: Tuple of (features DataFrame, output Series)
     """
     if 'Date' in df.columns:
-        df['Date'] = pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)
+        logger.debug(f"Date column converted to ordinal values, old values: {df['Date']}, new values: {pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)}")
+        df['Date'] = pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)               
 
     output = df[output_column]
     features = df.drop(columns=[output_column])
