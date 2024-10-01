@@ -33,6 +33,24 @@ def load_data_from_gcs(bucket_uri: str) -> pd.DataFrame:
     df = pd.read_csv(io.StringIO(data))
     return df
 
+def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convert the 'Date' column to Unix timestamp and drop the original 'Date' column.
+
+    :param df: Input DataFrame with a 'Date' column.
+    :return: DataFrame with 'Date_Unix' column and 'Date' column removed.
+    """
+    # Check if 'Date' column exists
+    if 'Date' in df.columns:
+        # Convert 'Date' to datetime
+        df['Date'] = pd.to_datetime(df['Date'])
+        # Convert 'Date' to Unix timestamp in seconds and store in a new column 'Date_Unix'
+        df['Date_Unix'] = df['Date'].astype('int64') // 10**9  # Convert to seconds
+        # Drop the original 'Date' column
+        df = df.drop(columns=['Date'])
+    return df
+
+
 def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num 1'):
     """
     Split the DataFrame into features and output based on the specified column name.
@@ -45,9 +63,8 @@ def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num 1'):
     #     logger.debug(f"Date column converted to ordinal values, old values: {df['Date']}, new values: {pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)}")
     #     df['Date'] = pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)               
 
-    df['Date'] = pd.to_datetime(df['Date'])    
-    # Convert the 'Date' column to Unix time (number of seconds since 1970-01-01)
-    df['Date_Unix'] = df['Date'].apply(lambda x: x.timestamp())   
+    # Preprocess the 'Date' column to convert to Unix timestamp and drop original 'Date' column
+    df = preprocess_date_column(df) 
 
     output = df[output_column]
     features = df.drop(columns=[output_column])
