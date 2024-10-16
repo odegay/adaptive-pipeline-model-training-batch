@@ -53,6 +53,16 @@ def load_data_from_gcs_bucket(bucket_name: str, file_name: str) -> dict:
         logger.error(f"Failed to load data from the GCS bucket: {bucket_name}, file: {file_name}, error: {e}")
         return None
 
+def dummy_pub_sub_message():
+    message_data = {
+        "pipeline_id": "TEST_PIPELINE_ID_FROM DOCKER",
+        "status": 10000      
+    } 
+    if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
+        return False
+    else:            
+        return True
+
 # Function to get the FFN model configuration for a given pipeline_id
 def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     
@@ -74,17 +84,8 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
 
     hidden_layers_model = build_flexible_model(input_tensor, model_config)
     logger.error(f"DEBUG MODE break for pipeline_id: {pipeline_id}")
-    logger.debug(f"DEBUG MODE resulting model for pipeline_id: {pipeline_id}: {hidden_layers_model.summary()}")
-
-def dummy_pub_sub_message():
-    message_data = {
-        "pipeline_id": "TEST_PIPELINE_ID_FROM DOCKER",
-        "status": 10000      
-    } 
-    if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
-        return False
-    else:            
-        return True
+    logger.debug(f"DEBUG MODE resulting model for pipeline_id: {pipeline_id}:")
+    hidden_layers_model.summary()
 
 # Function that is triggered by a cloud function to process the batch data    
 def train_model():
@@ -123,7 +124,6 @@ def train_model():
             adaptive_pipeline_get_model(pipeline_id)
     except Exception as e:
         logger.error(f"Failed to load pipeline data. Error: {e}")       
-    
     
     # Dummy model training process
     model_result = 2 + 2

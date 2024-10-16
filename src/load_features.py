@@ -49,7 +49,8 @@ def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num 1'):
     # Convert the 'Date' column to Unix time (number of seconds since 1970-01-01)
     df['Date_Unix'] = df['Date'].apply(lambda x: x.timestamp())   
 
-    output = df[output_column]
+    #output = df[output_column]
+    output = pd.get_dummies(df[output_column] - 1)  # One-hot encoding, assuming 1-100 values
     features = df.drop(columns=[output_column])
     return features, output
 
