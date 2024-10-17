@@ -79,26 +79,28 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
 
     #finalizing the model
     optimizer = tf.keras.optimizers.Adam(learning_rate=model_config['cfg']['lr'])
+    logger.debug(f"Optimizer: {optimizer}")
     #model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
     hidden_layers_model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+    logger.debug(f"Model compiled")
     reduceLR = tf.keras.callbacks.ReduceLROnPlateau(
         monitor='val_loss', factor=model_config['cfg']['lf'], patience=model_config['cfg']['lp'], 
         verbose=1, mode='auto', min_delta=model_config['cfg']['md'], cooldown=model_config['cfg']['cd'], min_lr=model_config['cfg']['mlr'])
-    
+    logger.debug(f"ReduceLR callback created")
     earlyStop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=model_config['cfg']['esp'], verbose=1, mode='auto', restire_best_weights=True)
-
+    logger.debug(f"EarlyStop callback created")
     checkpoint = tf.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
-
+    logger.debug(f"Checkpoint callback created")
     history = hidden_layers_model.fit(train_features_tensor, train_output_tensor, batch_size=model_config['cfg']['bs'], epochs=model_config['cfg']['ep'],
         validation_data=(test_features_tensor, test_output_tensor), callbacks=[reduceLR, earlyStop, checkpoint], verbose=1)
-    
+    logger.debug(f"Model training completed")
     best_model = tf.keras.models.load_model('best_model.h5')
-
+    logger.debug(f"Best model loaded")
     evaluation = best_model.evaluate(test_features_tensor, test_output_tensor)
-
+    logger.debug(f"Model evaluation completed")
     accuracy = evaluation[1]
     loss = evaluation[0]
-
+    logger.debug(f"Model evaluation: accuracy: {accuracy}, loss: {loss}")
     if accuracy > 0.9:
         logger.debug(f"Model training completed. Accuracy is more than 90%. Accuracy: {accuracy}, Loss: {loss}")
         message_data = {
@@ -163,6 +165,7 @@ def train_model():
     
     # Dummy model training process
     model_result = 2 + 2
+    logger.debug(f"Model training completed. Result: {model_result}")
     # if dummy_pub_sub_message():
     #     logger.debug(f"Model training completed. Result: {model_result}")
     # else:
