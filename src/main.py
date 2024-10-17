@@ -53,16 +53,6 @@ def load_data_from_gcs_bucket(bucket_name: str, file_name: str) -> dict:
         logger.error(f"Failed to load data from the GCS bucket: {bucket_name}, file: {file_name}, error: {e}")
         return None
 
-def dummy_pub_sub_message():
-    message_data = {
-        "pipeline_id": "TEST_PIPELINE_ID_FROM DOCKER",
-        "status": 10000      
-    } 
-    if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
-        return False
-    else:            
-        return True
-
 # Function to get the FFN model configuration for a given pipeline_id
 def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     
@@ -86,6 +76,52 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     logger.error(f"DEBUG MODE break for pipeline_id: {pipeline_id}")
     logger.debug(f"DEBUG MODE resulting model for pipeline_id: {pipeline_id}:")
     hidden_layers_model.summary()
+
+    #finalizing the model
+    optimizer = tf.keras.optimizers.Adam(learning_rate=model_config['cfg']['lr'])
+    #model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
+    hidden_layers_model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+    reduceLR = tf.keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss', factor=model_config['cfg']['lf'], patience=model_config['cfg']['lp'], 
+        verbose=1, mode='auto', min_delta=model_config['cfg']['md'], cooldown=model_config['cfg']['cd'], min_lr=model_config['cfg']['mlr'])
+    
+    earlyStop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=model_config['cfg']['esp'], verbose=1, mode='auto', restire_best_weights=True)
+
+    checkpoint = tf.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+
+    history = hidden_layers_model.fit(train_features_tensor, train_output_tensor, batch_size=model_config['cfg']['bs'], epochs=model_config['cfg']['ep'],
+        validation_data=(test_features_tensor, test_output_tensor), callbacks=[reduceLR, earlyStop, checkpoint], verbose=1)
+    
+    best_model = tf.keras.models.load_model('best_model.h5')
+
+    evaluation = best_model.evaluate(test_features_tensor, test_output_tensor)
+
+    accuracy = evaluation[1]
+    loss = evaluation[0]
+
+    if accuracy > 0.9:
+        logger.debug(f"Model training completed. Accuracy is more than 90%. Accuracy: {accuracy}, Loss: {loss}")
+        message_data = {
+            "pipeline_id": pipeline_id,
+            "status": 10001,
+            "accuracy": accuracy,
+            "loss": loss
+        }
+    else:
+        logger.debug(f"Model training completed. Accuracy is less than 90%. Accuracy: {accuracy}, Loss: {loss}")
+        message_data = {
+            "pipeline_id": pipeline_id,
+            "status": 10002,
+            "accuracy": accuracy,
+            "loss": loss
+        }
+    
+    if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
+        logger.error("Failed to publish the message to the Pub/Sub topic")
+        return False
+    else:
+        return True    
+
 
 # Function that is triggered by a cloud function to process the batch data    
 def train_model():

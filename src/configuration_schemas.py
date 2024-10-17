@@ -79,9 +79,27 @@ short_ffn_config_schema = {
                 },
                 "lr": { # learning_rate
                     "type": "number"
-                }
+                },
+                "lf": { # learning_rate_factor
+                    "type": "number"
+                },
+                "lp": { # learning_rate_patience
+                    "type": "number"
+                },
+                "md": { # min_delta
+                    "type": "number"
+                },
+                "cd": { # cooldown
+                    "type": "number"
+                },
+                "mlr": { # min_learning_rate
+                    "type": "number"
+                },
+                "esp": { # early_stopping_patience
+                    "type": "number"
+                }                                
             },
-            "required": ["lm", "bs", "ep", "lr"]                         
+            "required": ["lm", "bs", "ep", "lr", "lf", "lp", "md", "cd", "mlr", "esp"]                       
         },
         "l": {  # layers
             "type": "array",
