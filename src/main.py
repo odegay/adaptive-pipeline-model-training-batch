@@ -65,7 +65,10 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
         logger.error(f"current_configuration not found in pipeline data for pipeline_id: {pipeline_id}")
         return None
     
-    model_config = pipeline_data.get('current_configuration')
+    logger.debug(f"Model configuration for pipeline_id: {pipeline_id}: {pipeline_data}")
+    
+    model_config = json.loads(pipeline_data['current_configuration'])    
+    logger.debug(f"Model configuration for pipeline_id: {pipeline_id}: {model_config}")
 
     train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = main_training_process()
 
