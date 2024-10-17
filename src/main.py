@@ -157,15 +157,18 @@ def train_model():
     logger.debug("Loading pipeline data...")
     pipeline_id = os.getenv('PIPELINE_ID')
 
-    try:
-        pipeline_id = str(pipeline_id)
-        if pipeline_id is None:
-            logger.error("pipeline_id is not set")
-        else:
-            logger.debug(f"pipeline_id: {pipeline_id}")
-            adaptive_pipeline_get_model(pipeline_id)
-    except Exception as e:
-        logger.error(f"Failed to load pipeline data. Error: {e}")       
+    pipeline_id = str(pipeline_id)
+    adaptive_pipeline_get_model(pipeline_id)
+
+    # try:
+    #     pipeline_id = str(pipeline_id)
+    #     if pipeline_id is None:
+    #         logger.error("pipeline_id is not set")
+    #     else:
+    #         logger.debug(f"pipeline_id: {pipeline_id}")
+    #         adaptive_pipeline_get_model(pipeline_id)
+    # except Exception as e:
+    #     logger.error(f"Failed to load pipeline data. Error: {e}")       
     
     # Dummy model training process
     model_result = 2 + 2
