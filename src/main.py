@@ -10,7 +10,7 @@ import logging
 import requests
 import tensorflow as tf
 from build_ffn_configured import build_flexible_model
-from load_features import main_training_process
+from load_features import load_features
 
 logger = logging.getLogger('batch_logger')
 # Trace if the logger is inheriting anything from its parent
@@ -67,35 +67,39 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     
     logger.debug(f"Model configuration for pipeline_id: {pipeline_id}: {pipeline_data}")
     
-    model_config = json.loads(pipeline_data['current_configuration'])    
+    #model_config = json.loads(pipeline_data['current_configuration'])    
+    model_config = pipeline_data['current_configuration']
     logger.debug(f"Model configuration for pipeline_id: {pipeline_id}: {model_config}")
 
-    train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = main_training_process()
-
+    # Preparing the input and output layers
+    train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features()
     # Create a Keras input layer using the shape of the train_features_tensor
     input_tensor = tf.keras.Input(shape=train_features_tensor.shape[1:])
 
+    # Preparing hidden layers model
     hidden_layers_model = build_flexible_model(input_tensor, model_config)
     logger.error(f"DEBUG MODE break for pipeline_id: {pipeline_id}")
     logger.debug(f"DEBUG MODE resulting model for pipeline_id: {pipeline_id}:")
     hidden_layers_model.summary()
 
+    #Training the model
+    model_config_json = json.dumps(model_config)
     logger.debug(f"Starting model training...")
     #finalizing the model
-    optimizer = tf.keras.optimizers.Adam(learning_rate=model_config['cfg']['lr'])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=model_config_json['cfg']['lr'])
     logger.debug(f"Optimizer: {optimizer}")
     #model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
     hidden_layers_model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
     logger.debug(f"Model compiled")
     reduceLR = tf.keras.callbacks.ReduceLROnPlateau(
-        monitor='val_loss', factor=model_config['cfg']['lf'], patience=model_config['cfg']['lp'], 
-        verbose=1, mode='auto', min_delta=model_config['cfg']['md'], cooldown=model_config['cfg']['cd'], min_lr=model_config['cfg']['mlr'])
+        monitor='val_loss', factor=model_config_json['cfg']['lf'], patience=model_config_json['cfg']['lp'], 
+        verbose=1, mode='auto', min_delta=model_config_json['cfg']['md'], cooldown=model_config_json['cfg']['cd'], min_lr=model_config_json['cfg']['mlr'])
     logger.debug(f"ReduceLR callback created")
-    earlyStop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=model_config['cfg']['esp'], verbose=1, mode='auto', restire_best_weights=True)
+    earlyStop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=model_config_json['cfg']['esp'], verbose=1, mode='auto', restire_best_weights=True)
     logger.debug(f"EarlyStop callback created")
     checkpoint = tf.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
     logger.debug(f"Checkpoint callback created")
-    history = hidden_layers_model.fit(train_features_tensor, train_output_tensor, batch_size=model_config['cfg']['bs'], epochs=model_config['cfg']['ep'],
+    history = hidden_layers_model.fit(train_features_tensor, train_output_tensor, batch_size=model_config_json['cfg']['bs'], epochs=model_config_json['cfg']['ep'],
         validation_data=(test_features_tensor, test_output_tensor), callbacks=[reduceLR, earlyStop, checkpoint], verbose=1)
     logger.debug(f"Model training completed")
     best_model = tf.keras.models.load_model('best_model.h5')

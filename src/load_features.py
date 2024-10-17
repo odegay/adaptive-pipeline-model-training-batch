@@ -102,7 +102,7 @@ def prepare_input_tensor(features: pd.DataFrame, output: pd.Series, test_size: f
     return (train_features_tensor, train_output_tensor), (test_features_tensor, test_output_tensor)
 
 # Main script flow for FFN training
-def main_training_process():
+def load_features():
     # Example usage
     secret_name = "adaptive-pipeline-dataset-n1-lnk"  # The name of the GCP secret containing the bucket URI    
     bucket_uri = fetch_gcp_secret(secret_name)
