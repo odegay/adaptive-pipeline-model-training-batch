@@ -95,7 +95,7 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
         monitor='val_loss', factor=model_config_json['cfg']['lf'], patience=model_config_json['cfg']['lp'], 
         verbose=1, mode='auto', min_delta=model_config_json['cfg']['md'], cooldown=model_config_json['cfg']['cd'], min_lr=model_config_json['cfg']['mlr'])
     logger.debug(f"ReduceLR callback created")
-    earlyStop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=model_config_json['cfg']['esp'], verbose=1, mode='auto', restire_best_weights=True)
+    earlyStop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=model_config_json['cfg']['esp'], verbose=1, mode='auto', restore_best_weights=True)
     logger.debug(f"EarlyStop callback created")
     checkpoint = tf.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
     logger.debug(f"Checkpoint callback created")
