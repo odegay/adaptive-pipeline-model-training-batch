@@ -77,6 +77,7 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     logger.debug(f"DEBUG MODE resulting model for pipeline_id: {pipeline_id}:")
     hidden_layers_model.summary()
 
+    logger.debug(f"Starting model training...")
     #finalizing the model
     optimizer = tf.keras.optimizers.Adam(learning_rate=model_config['cfg']['lr'])
     logger.debug(f"Optimizer: {optimizer}")
