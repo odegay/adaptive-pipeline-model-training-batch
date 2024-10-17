@@ -163,11 +163,11 @@ def train_model():
     
     # Dummy model training process
     model_result = 2 + 2
-    if dummy_pub_sub_message():
-        logger.debug(f"Model training completed. Result: {model_result}")
-    else:
-        logger.error("Failed to publish the message to the Pub/Sub topic")
-        return
+    # if dummy_pub_sub_message():
+    #     logger.debug(f"Model training completed. Result: {model_result}")
+    # else:
+    #     logger.error("Failed to publish the message to the Pub/Sub topic")
+    #     return
     logging.shutdown()
 
 if __name__ == "__main__":
