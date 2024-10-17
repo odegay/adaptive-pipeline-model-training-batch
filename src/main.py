@@ -83,7 +83,7 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     hidden_layers_model.summary()
 
     #Training the model
-    model_config_json = json.dumps(model_config)
+    model_config_json = json.loads(model_config)
     logger.debug(f"Starting model training...")
     #finalizing the model
     optimizer = tf.keras.optimizers.Adam(learning_rate=model_config_json['cfg']['lr'])
