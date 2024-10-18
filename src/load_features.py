@@ -59,15 +59,12 @@ def split_features_and_output(df: pd.DataFrame, output_column: str = 'Num 1'):
     :param output_column: The column to be used as output. Default is 'Num1'.
     :return: Tuple of (features DataFrame, output Series)
     """
-    # if 'Date' in df.columns:
-    #     logger.debug(f"Date column converted to ordinal values, old values: {df['Date']}, new values: {pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)}")
-    #     df['Date'] = pd.to_datetime(df['Date']).map(pd.Timestamp.toordinal)               
-
-    # Preprocess the 'Date' column to convert to Unix timestamp and drop original 'Date' column
+    #Converts Date to the Unix timestamp
     df = preprocess_date_column(df) 
 
-    #output = df[output_column]
-    output = pd.get_dummies(df[output_column] - 1)  # One-hot encoding, assuming 1-100 values
+    output = df[output_column] - 1  # Convert to 0-based index
+    # Ensure one-hot encoding with 100 classes, even if some classes are not in the data
+    output = pd.get_dummies(output).reindex(columns=range(100), fill_value=0)    
     features = df.drop(columns=[output_column])
     return features, output
 
@@ -102,13 +99,18 @@ def prepare_input_tensor(features: pd.DataFrame, output: pd.Series, test_size: f
     return (train_features_tensor, train_output_tensor), (test_features_tensor, test_output_tensor)
 
 # Main script flow for FFN training
-def load_features():
+def load_features(isLocal: bool):
     # Example usage
-    secret_name = "adaptive-pipeline-dataset-n1-lnk"  # The name of the GCP secret containing the bucket URI    
-    bucket_uri = fetch_gcp_secret(secret_name)
+    if isLocal:
+        df = pd.read_csv("c:/Temp/Num1.csv")   
+    else:
+        secret_name = "adaptive-pipeline-dataset-n1-lnk"  # The name of the GCP secret containing the bucket URI    
+        bucket_uri = fetch_gcp_secret(secret_name)
+        df = load_data_from_gcs(bucket_uri)
+        
 
     # Load data
-    df = load_data_from_gcs(bucket_uri)
+    
 
     # Split features and output
     features, output = split_features_and_output(df)
@@ -121,3 +123,12 @@ def load_features():
 
     # Return the prepared tensors for further processing (e.g., model training)
     return train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor
+
+
+train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features(True)
+print(train_features_tensor.shape)
+print(train_output_tensor.shape)
+print(test_features_tensor.shape)
+print(test_output_tensor.shape)
+
+

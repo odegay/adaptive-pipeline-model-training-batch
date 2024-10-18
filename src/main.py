@@ -72,7 +72,7 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     logger.debug(f"Model configuration for pipeline_id: {pipeline_id}: {model_config}")
 
     # Preparing the input and output layers
-    train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features()
+    train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features(False)
     logger.debug(f"Train features tensor shape: {train_features_tensor.shape}")
     logger.debug(f"Train output tensor shape: {train_output_tensor.shape}")
     logger.debug(f"Test features tensor shape: {test_features_tensor.shape}")
