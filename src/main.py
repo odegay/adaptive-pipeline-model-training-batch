@@ -73,6 +73,10 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
 
     # Preparing the input and output layers
     train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features()
+    logger.debug(f"Train features tensor shape: {train_features_tensor.shape}")
+    logger.debug(f"Train output tensor shape: {train_output_tensor.shape}")
+    logger.debug(f"Test features tensor shape: {test_features_tensor.shape}")
+    logger.debug(f"Test output tensor shape: {test_output_tensor.shape}")
     # Create a Keras input layer using the shape of the train_features_tensor
     input_tensor = tf.keras.Input(shape=train_features_tensor.shape[1:])
 
@@ -99,8 +103,10 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     logger.debug(f"EarlyStop callback created")
     checkpoint = tf.keras.callbacks.ModelCheckpoint('best_model.keras', monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
     logger.debug(f"Checkpoint callback created")
+    
     history = hidden_layers_model.fit(train_features_tensor, train_output_tensor, batch_size=model_config_json['cfg']['bs'], epochs=model_config_json['cfg']['ep'],
         validation_data=(test_features_tensor, test_output_tensor), callbacks=[reduceLR, earlyStop, checkpoint], verbose=1)
+    
     logger.debug(f"Model training completed")
     best_model = tf.keras.models.load_model('best_model.keras')
     logger.debug(f"Best model loaded")
