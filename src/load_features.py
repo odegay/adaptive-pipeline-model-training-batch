@@ -125,10 +125,10 @@ def load_features(isLocal: bool):
     return train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor
 
 
-train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features(True)
-print(train_features_tensor.shape)
-print(train_output_tensor.shape)
-print(test_features_tensor.shape)
-print(test_output_tensor.shape)
+# train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features(True)
+# print(train_features_tensor.shape)
+# print(train_output_tensor.shape)
+# print(test_features_tensor.shape)
+# print(test_output_tensor.shape)
 
 
