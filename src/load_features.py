@@ -6,6 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from google.cloud import storage
 from adpipsvcfuncs import fetch_gcp_secret, load_valid_json
 import logging
+from datetime import datetime
 
 logger = logging.getLogger('batch_logger')
 if not logger.handlers:
@@ -32,6 +33,15 @@ def load_data_from_gcs(bucket_uri: str) -> pd.DataFrame:
     data = blob.download_as_text()
     df = pd.read_csv(io.StringIO(data))
     return df
+
+def save_data_to_gcs(best_model: tf.keras.Model, bucket_uri: str):
+    # Save the model to GCS
+    # Generates the name based on the Current Date and Time
+    model_name = f"model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.keras"
+    model_path = f"{bucket_uri}/{model_name}"
+    best_model.save(model_path)
+    logger.debug(f"Saved the best model to GCS: {model_path}")    
+
 
 def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
     """

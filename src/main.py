@@ -10,7 +10,7 @@ import logging
 import requests
 import tensorflow as tf
 from build_ffn_configured import build_flexible_model
-from load_features import load_features
+from load_features import load_features, save_data_to_gcs
 
 logger = logging.getLogger('batch_logger')
 # Trace if the logger is inheriting anything from its parent
@@ -131,6 +131,8 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
             "accuracy": accuracy,
             "loss": loss
         }
+    
+    save_data_to_gcs(pipeline_id, best_model)
     
     if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
         logger.error("Failed to publish the message to the Pub/Sub topic")
