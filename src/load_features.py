@@ -34,13 +34,22 @@ def load_data_from_gcs(bucket_uri: str) -> pd.DataFrame:
     df = pd.read_csv(io.StringIO(data))
     return df
 
-def save_data_to_gcs(best_model: tf.keras.Model, bucket_uri: str):
-    # Save the model to GCS
-    # Generates the name based on the Current Date and Time
+def save_data_to_gcs(pipeline_id: str, best_model: tf.keras.Model):
+    # Save the model to GCS    
+    # Generates the name based on the Current Date and Time    
+
+    secret_name = "adaptive-pipeline-dataset-n1-lnk"  # The name of the GCP secret containing the bucket URI    
+    bucket_uri = fetch_gcp_secret(secret_name)
+    # bucket_uri contains gs://adaptive-pipeline-main/features/number-1/dataset.csv
+
+    storage_client = storage.Client()
+    filepath = f"best-accuracy-models/number-1/{pipeline_id}"
+    bucket_name = bucket_uri.replace("gs://", "").split("/", 1)[0]
     model_name = f"model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.keras"
-    model_path = f"{bucket_uri}/{model_name}"
-    best_model.save(model_path)
-    logger.debug(f"Saved the best model to GCS: {model_path}")    
+    blob = storage_client.bucket(bucket_name).blob(f"{filepath}/{model_name}")
+    best_model.save(f"/tmp/{model_name}")
+    blob.upload_from_filename(f"/tmp/{model_name}")
+    logger.debug(f"Model saved to GCS bucket: {bucket_uri}/{filepath}/{model_name}")    
 
 
 def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
