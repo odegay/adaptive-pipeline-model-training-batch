@@ -12,6 +12,8 @@ import tensorflow as tf
 from build_ffn_configured import build_flexible_model
 from load_features import load_features, save_data_to_gcs
 
+ENV_MODE = "PROD"  # Change to "TEST" for local execution
+
 logger = logging.getLogger('batch_logger')
 # Trace if the logger is inheriting anything from its parent
 if logger.parent:
@@ -152,14 +154,16 @@ def save_model_configuration_and_publish_message(pipeline_data: dict, accuracy: 
     save_current_pipeline_data(pipeline_data)    
     logger.debug(f"Pipeline data saved: {pipeline_data}")
     
-    
-    # pub_message_data = {
-    # "pipeline_id": pipeline_data['pipeline_id'],
-    # "status": MSG_TYPE.GENERATE_NEW_MODEL.value,
-    # "current_configuration": pipeline_data['current_configuration']
-    # }
-    # publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, pub_message_data)   
-    # logger.debug(f"Publishing message to topic: {TOPICS.WORKFLOW_TOPIC.value} with data: {pub_message_data}")
+    if ENV_MODE == "TEST":
+        logger.debug(f"TEST MODE: Message data: {pipeline_data}")
+    else:
+        pub_message_data = {
+        "pipeline_id": pipeline_data['pipeline_id'],
+        "status": MSG_TYPE.GENERATE_NEW_MODEL.value,
+        "current_configuration": pipeline_data['current_configuration']
+        }
+        publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, pub_message_data)   
+        logger.debug(f"Publishing message to topic: {TOPICS.WORKFLOW_TOPIC.value} with data: {pub_message_data}")
 
 # Function to get the FFN model configuration for a given pipeline_id
 def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
@@ -248,11 +252,14 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
 
     save_model_configuration_and_publish_message(pipeline_data, accuracy)
     
-    if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
-        logger.error("Failed to publish the message to the Pub/Sub topic")
-        return False
+    if ENV_MODE == "TEST":
+        logger.debug(f"TEST MODE: Message data: {message_data}")
     else:
-        return True    
+        if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
+            logger.error("Failed to publish the message to the Pub/Sub topic")
+            return False
+        else:
+            return True    
 
 
 # Function that is triggered by a cloud function to process the batch data    

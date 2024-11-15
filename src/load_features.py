@@ -7,6 +7,9 @@ from google.cloud import storage
 from adpipsvcfuncs import fetch_gcp_secret, load_valid_json
 import logging
 from datetime import datetime
+import json
+
+ENV_MODE = "PROD"  # Change to "TEST" for local execution
 
 logger = logging.getLogger('batch_logger')
 if not logger.handlers:
@@ -51,6 +54,23 @@ def save_data_to_gcs(pipeline_id: str, best_model: tf.keras.Model):
     blob.upload_from_filename(f"/tmp/{model_name}")
     logger.debug(f"Model saved to GCS bucket: {bucket_uri}/{filepath}/{model_name}")    
 
+def save_data_to_json(df: pd.DataFrame, file_path: str):
+    """
+    Save DataFrame to a JSON file.
+
+    :param df: DataFrame to be saved.
+    :param file_path: Path to the JSON file.
+    """
+    df.to_json(file_path, orient='records', lines=True)
+
+def load_data_from_json(file_path: str) -> pd.DataFrame:
+    """
+    Load data from a JSON file and return as a Pandas DataFrame.
+
+    :param file_path: Path to the JSON file.
+    :return: DataFrame containing the data.
+    """
+    return pd.read_json(file_path, orient='records', lines=True)
 
 def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -120,8 +140,8 @@ def prepare_input_tensor(features: pd.DataFrame, output: pd.Series, test_size: f
 # Main script flow for FFN training
 def load_features(isLocal: bool):
     # Example usage
-    if isLocal:
-        df = pd.read_csv("c:/Temp/Num1.csv")   
+    if ENV_MODE == "TEST":
+        df = load_data_from_json("TESTS/data/local_data.json")
     else:
         secret_name = "adaptive-pipeline-dataset-n1-lnk"  # The name of the GCP secret containing the bucket URI    
         bucket_uri = fetch_gcp_secret(secret_name)
@@ -143,11 +163,15 @@ def load_features(isLocal: bool):
     # Return the prepared tensors for further processing (e.g., model training)
     return train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor
 
+def save_features(df: pd.DataFrame):
+    if ENV_MODE == "TEST":
+        save_data_to_json(df, "TESTS/data/local_data.json")
+    else:
+        # Save to GCS
+        pass
 
 # train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features(True)
 # print(train_features_tensor.shape)
 # print(train_output_tensor.shape)
 # print(test_features_tensor.shape)
 # print(test_output_tensor.shape)
-
-
