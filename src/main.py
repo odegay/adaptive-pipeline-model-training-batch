@@ -38,6 +38,11 @@ if not logger.handlers:
 # logger = logging.getLogger(__name__)
 # logger.setLevel(logging.DEBUG)  # Capture DEBUG, INFO, WARNING, ERROR, CRITICAL
 
+# Import the config.json file to determine the execution environment
+with open('config.json') as config_file:
+    config = json.load(config_file)
+execution_environment = config.get('execution_environment', 'gcp')
+
 # Function to load data from the csv file located in the GCS bucket to the DataFrame
 def load_data_from_gcs_bucket(bucket_name: str, file_name: str) -> dict:
     try:
@@ -180,7 +185,8 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
     logger.debug(f"Model configuration for pipeline_id: {pipeline_id}: {model_config}")
 
     # Preparing the input and output layers
-    train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features(False)
+    isLocal = execution_environment == 'local'
+    train_features_tensor, train_output_tensor, test_features_tensor, test_output_tensor = load_features(isLocal)
     logger.debug(f"Train features tensor shape: {train_features_tensor.shape}")
     logger.debug(f"Train output tensor shape: {train_output_tensor.shape}")
     logger.debug(f"Test features tensor shape: {test_features_tensor.shape}")
@@ -248,11 +254,14 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
 
     save_model_configuration_and_publish_message(pipeline_data, accuracy)
     
-    if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
-        logger.error("Failed to publish the message to the Pub/Sub topic")
-        return False
+    if execution_environment == 'local':
+        logger.info(f"Message data: {message_data}")
     else:
-        return True    
+        if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
+            logger.error("Failed to publish the message to the Pub/Sub topic")
+            return False
+        else:
+            return True    
 
 
 # Function that is triggered by a cloud function to process the batch data    

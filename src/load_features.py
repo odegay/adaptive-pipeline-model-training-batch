@@ -7,6 +7,7 @@ from google.cloud import storage
 from adpipsvcfuncs import fetch_gcp_secret, load_valid_json
 import logging
 from datetime import datetime
+import json
 
 logger = logging.getLogger('batch_logger')
 if not logger.handlers:
@@ -19,6 +20,11 @@ if not logger.handlers:
     # Add the handler to the root logger
     logger.addHandler(ch)
 
+# Import the config.json file to determine the execution environment
+with open('config.json') as config_file:
+    config = json.load(config_file)
+execution_environment = config.get('execution_environment', 'gcp')
+
 def load_data_from_gcs(bucket_uri: str) -> pd.DataFrame:
     """
     Load CSV data from a Google Cloud Storage bucket URI and return as a Pandas DataFrame.
@@ -26,30 +32,40 @@ def load_data_from_gcs(bucket_uri: str) -> pd.DataFrame:
     :param bucket_uri: The URI of the CSV file in the GCP bucket.
     :return: DataFrame containing the CSV data.
     """
-    storage_client = storage.Client()
-    bucket_name, file_path = bucket_uri.replace("gs://", "").split("/", 1)
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(file_path)
-    data = blob.download_as_text()
-    df = pd.read_csv(io.StringIO(data))
+    if execution_environment == 'local':
+        with open('tests/data/sample_data.json') as f:
+            data = json.load(f)
+        df = pd.DataFrame(data)
+    else:
+        storage_client = storage.Client()
+        bucket_name, file_path = bucket_uri.replace("gs://", "").split("/", 1)
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(file_path)
+        data = blob.download_as_text()
+        df = pd.read_csv(io.StringIO(data))
     return df
 
 def save_data_to_gcs(pipeline_id: str, best_model: tf.keras.Model):
     # Save the model to GCS    
     # Generates the name based on the Current Date and Time    
 
-    secret_name = "adaptive-pipeline-dataset-n1-lnk"  # The name of the GCP secret containing the bucket URI    
-    bucket_uri = fetch_gcp_secret(secret_name)
-    # bucket_uri contains gs://adaptive-pipeline-main/features/number-1/dataset.csv
+    if execution_environment == 'local':
+        model_name = f"model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.keras"
+        best_model.save(f"tests/data/{model_name}")
+        logger.debug(f"Model saved locally: tests/data/{model_name}")
+    else:
+        secret_name = "adaptive-pipeline-dataset-n1-lnk"  # The name of the GCP secret containing the bucket URI    
+        bucket_uri = fetch_gcp_secret(secret_name)
+        # bucket_uri contains gs://adaptive-pipeline-main/features/number-1/dataset.csv
 
-    storage_client = storage.Client()
-    filepath = f"best-accuracy-models/number-1/{pipeline_id}"
-    bucket_name = bucket_uri.replace("gs://", "").split("/", 1)[0]
-    model_name = f"model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.keras"
-    blob = storage_client.bucket(bucket_name).blob(f"{filepath}/{model_name}")
-    best_model.save(f"/tmp/{model_name}")
-    blob.upload_from_filename(f"/tmp/{model_name}")
-    logger.debug(f"Model saved to GCS bucket: {bucket_uri}/{filepath}/{model_name}")    
+        storage_client = storage.Client()
+        filepath = f"best-accuracy-models/number-1/{pipeline_id}"
+        bucket_name = bucket_uri.replace("gs://", "").split("/", 1)[0]
+        model_name = f"model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.keras"
+        blob = storage_client.bucket(bucket_name).blob(f"{filepath}/{model_name}")
+        best_model.save(f"/tmp/{model_name}")
+        blob.upload_from_filename(f"/tmp/{model_name}")
+        logger.debug(f"Model saved to GCS bucket: {bucket_uri}/{filepath}/{model_name}")    
 
 
 def preprocess_date_column(df: pd.DataFrame) -> pd.DataFrame:
@@ -149,5 +165,3 @@ def load_features(isLocal: bool):
 # print(train_output_tensor.shape)
 # print(test_features_tensor.shape)
 # print(test_output_tensor.shape)
-
-
