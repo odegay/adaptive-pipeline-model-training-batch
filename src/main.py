@@ -52,6 +52,114 @@ def load_data_from_gcs_bucket(bucket_name: str, file_name: str) -> dict:
     except Exception as e:
         logger.error(f"Failed to load data from the GCS bucket: {bucket_name}, file: {file_name}, error: {e}")
         return None
+db_schema = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "version": {
+            "type": "string"
+        },
+        "pipeline_id": {
+            "type": "string"
+        },
+        "status": {
+            "type": "number",
+        },
+        "current_hidden_layers_ct": {
+            "type": ["number", "null"]
+        },
+        "current_configuration": {
+            "type": ["string", "null"]
+        },
+        "hidden_layers_configs": {
+            "type": ["array", "null"],
+            "items": {
+                "hidden_layers_ct": {
+                    "type": "number"
+                },
+                "is_completed": {
+                    "type": "boolean"
+                },
+                "MAX_accuracy": {
+                    "type": "number"
+                },
+                "configurations": {
+                    "type": "array",
+                    "items": {
+                        "configuration": {
+                            "type": "string"
+                        },
+                        "accuracy": {
+                            "type": "number"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "required": ["version", "pipeline_id", "status"],
+    "additionalProperties": False
+}    
+
+
+def save_model_configuration_and_publish_message(pipeline_data: dict, accuracy: float) -> bool:
+    # if hidden_layers_configs does not exist in the pipeline_data, create it and create a variable that stores a reference to it
+    if "hidden_layers_configs" not in pipeline_data:
+        pipeline_data['hidden_layers_configs'] = []
+    hidden_layers_configs_dict = pipeline_data['hidden_layers_configs']
+
+    # Gets the current_hidden_layers_ct from the pipeline_data checks if it is not set (throws an error if it is not set), 
+    if "current_hidden_layers_ct" not in pipeline_data:
+        logger.error("current_hidden_layers_ct is not set")
+        return False
+    current_hidden_layers_ct = pipeline_data['current_hidden_layers_ct']
+    current_configuration = pipeline_data['current_configuration']
+    if not current_configuration:
+        logger.error("current_configuration is not set")
+        return False
+    if not hidden_layers_configs_dict:
+        logger.error("hidden_layers_configs_dict is not set")
+        return False
+    # checks if there is an entry in the hidden_layers_configs_dict with the same hidden_layers_ct value as the current_hidden_layers_ct
+    # if there is no entry, it creates a new entry in the hidden_layers_configs_dict with the current_configuration and accuracy values
+    # if there is an entry, it updates the entry by adding the current_configuration and accuracy values to the configurations array
+
+    for hidden_layers_config in hidden_layers_configs_dict:
+        if hidden_layers_config['hidden_layers_ct'] == current_hidden_layers_ct:
+            hidden_layers_config['configurations'].append({"configuration": current_configuration, "accuracy": accuracy})
+            if accuracy > hidden_layers_config['MAX_accuracy']:
+                hidden_layers_config['MAX_accuracy'] = accuracy
+            logger.debug(f"Updated hidden_layers_config: {hidden_layers_config}")
+            break
+    else:
+        hidden_layers_configs_dict.append(
+            {
+                "hidden_layers_ct": current_hidden_layers_ct, 
+                "is_completed": False, 
+                "MAX_accuracy": accuracy, 
+                "configurations": [{
+                    "configuration": current_configuration, "accuracy": accuracy}
+                    ]})
+        logger.debug(f"Added new hidden_layers_config: {hidden_layers_configs_dict[-1]}")
+
+
+
+    #At the first run of the pipeline, the current_hidden_layers_ct is not set, so we set it to 1
+    # if "current_hidden_layers_ct" not in pipeline_data:
+    #     pipeline_data['current_hidden_layers_ct'] = 1
+    pipeline_data['status'] = MSG_TYPE.START_MODEL_CONFIGURATION.value
+    # API call to save the configuration
+    save_current_pipeline_data(pipeline_data)    
+    logger.debug(f"Pipeline data saved: {pipeline_data}")
+    
+    
+    # pub_message_data = {
+    # "pipeline_id": pipeline_data['pipeline_id'],
+    # "status": MSG_TYPE.GENERATE_NEW_MODEL.value,
+    # "current_configuration": pipeline_data['current_configuration']
+    # }
+    # publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, pub_message_data)   
+    # logger.debug(f"Publishing message to topic: {TOPICS.WORKFLOW_TOPIC.value} with data: {pub_message_data}")
 
 # Function to get the FFN model configuration for a given pipeline_id
 def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
@@ -131,8 +239,14 @@ def adaptive_pipeline_get_model(pipeline_id: str) -> dict:
             "accuracy": accuracy,
             "loss": loss
         }
+        # updating the pipeline data with the model training result and logging the model training result as a part of the pipeline data
+        # 
+
     
     save_data_to_gcs(pipeline_id, best_model)
+    logger.debug(f"Model saved to GCS bucket")
+
+    save_model_configuration_and_publish_message(pipeline_data, accuracy)
     
     if not publish_to_pubsub(TOPICS.WORKFLOW_TOPIC.value, message_data):
         logger.error("Failed to publish the message to the Pub/Sub topic")
