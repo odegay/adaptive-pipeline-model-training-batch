@@ -117,9 +117,10 @@ def save_model_configuration_and_publish_message(pipeline_data: dict, accuracy: 
     if not current_configuration:
         logger.error("current_configuration is not set")
         return False
-    if not hidden_layers_configs_dict:
-        logger.error("hidden_layers_configs_dict is not set")
-        return False
+    # if not hidden_layers_configs_dict:
+    #     logger.error("hidden_layers_configs_dict is not set")
+    #     return False
+    
     # checks if there is an entry in the hidden_layers_configs_dict with the same hidden_layers_ct value as the current_hidden_layers_ct
     # if there is no entry, it creates a new entry in the hidden_layers_configs_dict with the current_configuration and accuracy values
     # if there is an entry, it updates the entry by adding the current_configuration and accuracy values to the configurations array
